@@ -14,7 +14,7 @@ struct Opt {
     #[clap(help = "The directory to compile.")]
     directory: PathBuf,
     #[clap(help = "The output file name.")]
-    output: Option<String>,
+    output: Option<PathBuf>,
     #[clap(short, long, help = "Generate a C file as well.")]
     c_file: bool,
     #[clap(short, long, help = "The prefix to add to the output struct.")]
@@ -37,12 +37,15 @@ fn main() {
         std::process::exit(1);
     }
 
-    let output_name = match opt.output {
-        Some(path) => path,
+    let output_name = match &opt.output {
+        Some(path) => path.file_stem().unwrap().to_str().unwrap().to_string(),
         None => directory.file_stem().unwrap().to_str().unwrap().to_string(),
     };
 
-    let output_header = format!("{}.h", output_name);
+    let output_header = match &opt.output {
+        Some(path) => format!("{}.h", path.to_str().unwrap()),
+        None => format!("{}.h", output_name),
+    };
 
     let mut output = match std::fs::File::create(output_header) {
         Ok(file) => file,
@@ -60,7 +63,10 @@ fn main() {
     generate_header(&directory, &output_name, &prefix, &mut output);
 
     if opt.c_file {
-        let output_impl = format!("{}.c", output_name);
+        let output_impl = match &opt.output {
+            Some(path) => format!("{}.c", path.to_str().unwrap()),
+            None => format!("{}.c", output_name),
+        };
 
         output = match std::fs::File::create(output_impl) {
             Ok(file) => file,
