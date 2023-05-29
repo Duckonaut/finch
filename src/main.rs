@@ -48,7 +48,7 @@ fn main() {
         }
     };
 
-    generate_header(&directory, &mut output);
+    generate_header(&directory, &output_name, &mut output);
 
     if opt.c_file {
         let output_impl = format!("{}.c", output_name);
@@ -62,7 +62,7 @@ fn main() {
         };
     }
 
-    generate_impl(&directory, &mut output, !opt.c_file);
+    generate_impl(&directory, &output_name, &mut output, !opt.c_file);
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -91,11 +91,9 @@ impl AssetOutputType {
     }
 }
 
-fn generate_header(directory: &Path, output: &mut impl Write) {
-    let directory_name = directory.file_stem().unwrap().to_str().unwrap();
-
-    writeln!(output, "#ifndef {}_H", directory_name.to_uppercase()).unwrap();
-    writeln!(output, "#define {}_H", directory_name.to_uppercase()).unwrap();
+fn generate_header(directory: &Path, output_name: &str, output: &mut impl Write) {
+    writeln!(output, "#ifndef {}_H", output_name.to_uppercase()).unwrap();
+    writeln!(output, "#define {}_H", output_name.to_uppercase()).unwrap();
 
     writeln!(output, "#include <stdint.h>").unwrap();
     writeln!(output, "#include <stddef.h>").unwrap();
@@ -113,12 +111,12 @@ fn generate_header(directory: &Path, output: &mut impl Write) {
         struct_fieldify(&path, output);
     }
 
-    writeln!(output, "}} __{}_t;", directory_name).unwrap();
+    writeln!(output, "}} __{}_t;", output_name).unwrap();
 
     writeln!(
         output,
         "extern const __{}_t {};",
-        directory_name, directory_name
+        output_name, output_name
     )
     .unwrap();
 
@@ -161,18 +159,16 @@ fn struct_fieldify(path: &Path, output: &mut impl Write) {
     }
 }
 
-fn generate_impl(directory: &Path, output: &mut impl Write, single_file: bool) {
-    let directory_name = directory.file_stem().unwrap().to_str().unwrap();
-
+fn generate_impl(directory: &Path, output_name: &str, output: &mut impl Write, single_file: bool) {
     if single_file {
         writeln!(
             output,
             "#ifdef {}_IMPLEMENTATION",
-            directory_name.to_uppercase()
+            output_name.to_uppercase()
         )
         .unwrap();
     } else {
-        writeln!(output, "#include \"{}.h\"", directory_name).unwrap();
+        writeln!(output, "#include \"{}.h\"", output_name).unwrap();
     }
 
     writeln!(output, "#include <stddef.h>").unwrap();
@@ -185,7 +181,7 @@ fn generate_impl(directory: &Path, output: &mut impl Write, single_file: bool) {
     writeln!(
         output,
         "const __{}_t {} = {{",
-        directory_name, directory_name
+        output_name, output_name
     )
     .unwrap();
 
@@ -206,7 +202,7 @@ fn generate_impl(directory: &Path, output: &mut impl Write, single_file: bool) {
         writeln!(
             output,
             "#undef {}_IMPLEMENTATION",
-            directory_name.to_uppercase()
+            output_name.to_uppercase()
         )
         .unwrap();
 
