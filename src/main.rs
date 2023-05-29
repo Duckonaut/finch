@@ -11,10 +11,14 @@ use clap::Parser;
     about = "A small CLI program to compile an asset directory into a C header file."
 )]
 struct Opt {
+    #[clap(help = "The directory to compile.")]
     directory: PathBuf,
+    #[clap(help = "The output file name.")]
     output: Option<String>,
-    #[clap(short, long)]
+    #[clap(short, long, help = "Generate a C file as well.")]
     c_file: bool,
+    #[clap(short, long, help = "The prefix to add to the output struct.")]
+    prefix: Option<String>,
 }
 
 fn main() {
@@ -48,7 +52,12 @@ fn main() {
         }
     };
 
-    generate_header(&directory, &output_name, &mut output);
+    let prefix = match opt.prefix {
+        Some(prefix) => prefix,
+        None => "".to_string(),
+    };
+
+    generate_header(&directory, &output_name, &prefix, &mut output);
 
     if opt.c_file {
         let output_impl = format!("{}.c", output_name);
@@ -62,7 +71,7 @@ fn main() {
         };
     }
 
-    generate_impl(&directory, &output_name, &mut output, !opt.c_file);
+    generate_impl(&directory, &output_name, &prefix, !opt.c_file, &mut output);
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -91,7 +100,7 @@ impl AssetOutputType {
     }
 }
 
-fn generate_header(directory: &Path, output_name: &str, output: &mut impl Write) {
+fn generate_header(directory: &Path, output_name: &str, prefix: &str, output: &mut impl Write) {
     writeln!(output, "#ifndef {}_H", output_name.to_uppercase()).unwrap();
     writeln!(output, "#define {}_H", output_name.to_uppercase()).unwrap();
 
@@ -115,8 +124,8 @@ fn generate_header(directory: &Path, output_name: &str, output: &mut impl Write)
 
     writeln!(
         output,
-        "extern const __{}_t {};",
-        output_name, output_name
+        "extern const __{}_t {}{};",
+        output_name, prefix, output_name
     )
     .unwrap();
 
@@ -159,7 +168,7 @@ fn struct_fieldify(path: &Path, output: &mut impl Write) {
     }
 }
 
-fn generate_impl(directory: &Path, output_name: &str, output: &mut impl Write, single_file: bool) {
+fn generate_impl(directory: &Path, output_name: &str, prefix: &str, single_file: bool, output: &mut impl Write) {
     if single_file {
         writeln!(
             output,
@@ -180,8 +189,8 @@ fn generate_impl(directory: &Path, output_name: &str, output: &mut impl Write, s
 
     writeln!(
         output,
-        "const __{}_t {} = {{",
-        output_name, output_name
+        "const __{}_t {}{} = {{",
+        output_name, prefix, output_name
     )
     .unwrap();
 
